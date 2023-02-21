@@ -1,0 +1,12 @@
+Package: yorktools
+Type: Package
+Title: York Regression Extensions 
+Version: 0.0.1
+Author: Raymond Walters
+Maintainer: Raymond Walters <rwalters@broadinstitute.org>
+Description: York regression with extended options, including
+    fixed intercept, predicted values, and choice of standard error method.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
