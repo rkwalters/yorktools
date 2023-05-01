@@ -22,9 +22,4 @@ See `?york`
 # To do:
 
 * Clean up git history before release
-* add ML SEs
-* add predict function
-* add resid function
-* add coef function
-* add normal (not fixed) intercept
-
+* Documentation

@@ -5,7 +5,7 @@
 \title{York Regression}
 \usage{
 york(data, intercept = NA, method = "LS", tol = 1e-15, maxit = 50,
-  verbose = FALSE, gridstartvals = FALSE)
+  verbose = FALSE, gridstartvals = TRUE)
 }
 \arguments{
 \item{data}{Data matrix. Assumed to be a matrix with columns containing (in order):

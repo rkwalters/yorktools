@@ -105,13 +105,13 @@
 
 
 # adapted from isoplotR function york()
-york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,gridstartvals=FALSE){
+york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,gridstartvals=TRUE){
 
   # input check
   dat <- as.data.frame(data)
 
   if(!(dim(dat)[2] %in% c(4,5))){
-    stop("dat must have 4 or 5 columns.")
+    stop("data must have 4 or 5 columns.")
   }
 
   if(!(method=="LS" || method=="ML")){
@@ -123,7 +123,9 @@ york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,
   }
 
   # get data from data frame
-  if (ncol(dat)==4) dat <- cbind(dat,0)
+  if (ncol(dat)==4){
+    dat <- cbind(dat,0)
+  }
   colnames(dat) <- c('X','sX','Y','sY','rXY')
 
   # drop NAs
@@ -343,6 +345,256 @@ york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,
 
   out$converge <- list(converged=converge, tol=tol)
   out$type <- 'york'
+  class(out) <- 'york'
 
   return(out)
+}
+
+
+#' York Regression predicted values
+#'
+#' @description
+#' Fitted values method for use with york regression output
+#'
+#' @details
+#' ...
+#'
+#' @param data
+#' Data matrix. Assumed to be a matrix with columns containing (in order):
+#' X, standard error of X, Y, standard error of Y, and residual correlation.
+#' The correlation column may be omitted, in which case the correlation is
+#' assumed to be 0.
+#'
+#' @param model
+#' York regression model, as output by `york()`. Alternatively, can specify model by providing `slope` and `intercept` values.
+#'
+#' @param intercept
+#' Scalar, York regression model intercept.
+#'
+#' @param slope
+#' Scalar, York regression model slope.
+#'
+#' @return
+#' Data frame of predicted values for each observation with columns:
+#'
+#' @export
+pred.york <- function(data, model=NULL, intercept=NA, slope=NA){
+
+  if(is.null(model) && is.na(slope)){
+    stop("must specify either model or slope")
+  }
+
+  if(!is.null(model) && !is.na(slope)){
+    stop("must specify only one of 'model' or 'slope'")
+  }
+
+  if(!is.null(model) && (class(model)!="york") ){
+    stop("model must be from york regression")
+  }
+
+  if(!is.null(model)){
+    slope <- model$b[1]
+    intercept <- model$a[1]
+  }
+
+  dat <- as.data.frame(data)
+
+  if(!(dim(dat)[2] %in% c(4,5))){
+    stop("data must have 4 or 5 columns.")
+  }
+
+  # get data from data frame
+  if (ncol(dat)==4){
+    dat <- cbind(dat,0)
+  }
+  colnames(dat) <- c('X','sX','Y','sY','rXY')
+
+
+
+  W <- 1/(dat$sY^2 + (slope^2)*dat$sX^2 - 2*slope*dat$rXY*dat$sY*dat$sX)
+
+  xpred <- W*(dat$X*(dat$sY^2-slope*dat$rXY*dat$sY*dat$sX)+(dat$Y-intercept)*(slope*dat$sX^2-dat$rXY*dat$sY*dat$sX))
+  ypred <- intercept + slope*xpred
+
+  out <- data.frame(xpred=xpred, ypred=ypred)
+  row.names(out) <- row.names(data)
+  return(out)
+}
+
+#' @rdname pred.york
+#' @export
+fitted.york <- function(model, data){
+
+  pred.york(data, model=model)
+
+}
+
+
+#' York Regression coefficients
+#'
+#' @description
+#' Coefficient methods to extract York regression model parameters
+#'
+#' @details
+#' ...
+#'
+#' @param data
+#' Data matrix. Assumed to be a matrix with columns containing (in order):
+#' X, standard error of X, Y, standard error of Y, and residual correlation.
+#' The correlation column may be omitted, in which case the correlation is
+#' assumed to be 0.
+#'
+#' @param model
+#' York regression model, as output by `york()`
+#'
+#' @return
+#' Estimates and standard errors from the fitted York regression model
+#'
+#'
+#' @export
+coef.york <- function(model){
+  if(class(model)!="york" ){
+    stop("model must be from york regression")
+  }
+
+  out <- data.frame(Estimate=c(model$a[1], model$b[1]), `Std. Error`=c(model$a[2], model$b[2]))
+  rownames(out) <- c("Intercept","x")
+
+  return(out)
+}
+
+
+#' York Regression loss
+#'
+#' @description
+#' Residuals and loss function values for each observation in a fitted York regression
+#'
+#' @details
+#' ...
+#'
+#' @param data
+#' Data matrix. Assumed to be a matrix with columns containing (in order):
+#' X, standard error of X, Y, standard error of Y, and residual correlation.
+#' The correlation column may be omitted, in which case the correlation is
+#' assumed to be 0.
+#'
+#' @param model
+#' York regression model, as output by `york()`. Alternatively, can specify model by providing `slope` and `intercept` values.
+#'
+#' @param intercept
+#' Scalar, York regression model intercept.
+#'
+#' @param slope
+#' Scalar, York regression model slope.
+#'
+#' @param func
+#' Which loss function to report. Either "line" or "predicted_values". See Details.
+#'
+#' @return
+#' Data frame of residuals for each observation with columns:
+#'
+#'
+#' @export
+loss_per_obs.york <- function(data, model=NULL, intercept=NA, slope=NA, func="line"){
+
+  if(is.null(model) && is.na(slope)){
+    stop("must specify either model or slope")
+  }
+
+  if(!is.null(model) && !is.na(slope)){
+    stop("must specify only one of 'model' or 'slope'")
+  }
+
+  if(!is.null(model) && (class(model)!="york") ){
+    stop("model must be from york regression")
+  }
+
+  if(!(func %in% c("line","predicted_values"))){
+    stop("func must be either 'line' or 'predicted_values'")
+  }
+
+  if(!is.null(model)){
+    slope <- model$b[1]
+    intercept <- model$a[1]
+  }
+
+  dat <- as.data.frame(data)
+
+  if(!(dim(dat)[2] %in% c(4,5))){
+    stop("data must have 4 or 5 columns.")
+  }
+
+  # get data from data frame
+  if (ncol(dat)==4){
+    dat <- cbind(dat,0)
+  }
+  colnames(dat) <- c('X','sX','Y','sY','rXY')
+
+
+  if(func=="line"){
+
+    W <- 1/(dat$sY^2 + (slope^2)*dat$sX^2 - 2*slope*dat$rXY*dat$sY*dat$sX)
+
+    resid <- dat$Y-intercept-slope*dat$X
+    loss <- W*resid^2
+
+    out <- data.frame(resid=resid, loss=loss)
+    rownames(out) <- rownames(data)
+
+
+  }else if(func=="predicted_values"){
+
+    pred <- pred.york(dat, intercept=intercept, slope=slope)
+
+    xresid <- dat$X-pred$xpred
+    yresid <- dat$Y-pred$ypred
+
+    loss <- (xresid^2/dat$sX^2 + yresid^2/dat$sY^2 - 2*dat$rXY*xresid*yresid/(dat$sX*dat$sY))/(1-dat$rXY)^2
+
+    out <- data.frame(xresid=xresid, yresid=yresid, loss=loss)
+    rownames(out) <- rownames(data)
+
+  }
+
+  return(out)
+
+}
+
+
+
+#' York Regression residuals
+#'
+#' @description
+#' Residuals method for use with york regression output
+#'
+#' @details
+#' ...
+#'
+#' @param model
+#' York regression model, as output by `york()`
+#'
+#' @param data
+#' Data matrix. Assumed to be a matrix with columns containing (in order):
+#' X, standard error of X, Y, standard error of Y, and residual correlation.
+#' The correlation column may be omitted, in which case the correlation is
+#' assumed to be 0.
+#'
+#' @return
+#' Data frame of residuals for each observation with columns:
+#' \describe{
+#'
+#'   \item{\code{xresid}}{difference between X and predicted X value}
+#'
+#'   \item{\code{yresid}}{difference between Y and predicted Y value}
+#'
+#'   \item{\code{loss}}{weighted misfit}
+#'
+#' }
+#'
+#' @export
+
+residuals.york <- function(model, data){
+
+  loss_per_obs.york(data, model=model, func="predicted_values")
+
 }
