@@ -76,7 +76,13 @@
 #' xsd <- sqrt(runif(n,.05,1))
 #' ysd <- sqrt(runif(n,.05,0.5))
 #' re <- rep(0.3,n)
-#' obs <- t(sapply(1:n, function(i) MASS::mvrnorm(1, mu=c(xtrue[i],ytrue[i]), Sigma = matrix(c(xsd[i]^2, re[i]*xsd[i]*ysd[i], re[i]*xsd[i]*ysd[i], ysd[i]^2),2,2))))
+#' obs <- t(sapply(1:n,
+#'     function(i){
+#'         MASS::mvrnorm(1,
+#'             mu=c(xtrue[i],ytrue[i]),
+#'             Sigma = matrix(c(xsd[i]^2, re[i]*xsd[i]*ysd[i], re[i]*xsd[i]*ysd[i], ysd[i]^2),2,2)
+#'         )
+#'     }))
 #' dat <-data.frame(x=obs[,1],sx=xsd,y=obs[,2],sy=ysd,re=re)
 #'
 #' # IsoplotR::york(dat)
@@ -86,6 +92,7 @@
 #' f2 <- york(dat)
 #' f3 <- york(dat, intercept=0)
 #'
+#' \dontrun{
 #' plot(dat$x, dat$y, xlim=c(0,7.5), ylim=c(0,7.5), pch=20)
 #' arrows(x0=dat$x-dat$sx,x1=dat$x+dat$sx,y0=dat$y,y1=dat$y,code=3,angle=90,length=0.02)
 #' arrows(x0=dat$x,x1=dat$x,y0=dat$y-dat$sy,y1=dat$y+dat$sy,code=3,angle=90,length=0.02)
@@ -95,12 +102,8 @@
 #' abline(f2$a[1], f2$b[1], col="green")
 #' abline(f3$a[1], f3$b[1], col="purple")
 #' dev.off()
+#' }
 #'
-#' f2
-#'
-#' f3
-#'
-#' # york(dat, method="ML")
 #'
 
 
@@ -421,12 +424,36 @@ pred.york <- function(data, model=NULL, intercept=NA, slope=NA){
   return(out)
 }
 
-#' @rdname pred.york
+#' York Regression predicted values
+#'
+#' @description
+#' Fitted values method for use with york regression output
+#'
+#' @details
+#' Wrapper for more standard interface to `pred.york()`
+#'
+#' @param object
+#' York regression model, as output by `york()`
+#'
+#' @param ...
+#' Must include data matrix named `data`. Assumed to be a matrix with columns containing (in order):
+#' X, standard error of X, Y, standard error of Y, and residual correlation.
+#' The correlation column may be omitted, in which case the correlation is
+#' assumed to be 0. All other arguments ignored.
+#'
+#' @return
+#' Data frame of predicted values for each observation with columns:
+#'
 #' @export
-fitted.york <- function(model, data){
+fitted.york <- function(object, ...){
 
-  pred.york(data, model=model)
+  args <- list(...)
 
+  if(exists(args$data)){
+    pred.york(args$data, model=object)
+  }else{
+    stop("York regression fitted values requires specifying separate `data`")
+  }
 }
 
 
@@ -438,26 +465,23 @@ fitted.york <- function(model, data){
 #' @details
 #' ...
 #'
-#' @param data
-#' Data matrix. Assumed to be a matrix with columns containing (in order):
-#' X, standard error of X, Y, standard error of Y, and residual correlation.
-#' The correlation column may be omitted, in which case the correlation is
-#' assumed to be 0.
-#'
-#' @param model
+#' @param object
 #' York regression model, as output by `york()`
+#'
+#' @param ...
+#' Ignored
 #'
 #' @return
 #' Estimates and standard errors from the fitted York regression model
 #'
 #'
 #' @export
-coef.york <- function(model){
-  if(class(model)!="york" ){
+coef.york <- function(object, ...){
+  if(class(object)!="york" ){
     stop("model must be from york regression")
   }
 
-  out <- data.frame(Estimate=c(model$a[1], model$b[1]), `Std. Error`=c(model$a[2], model$b[2]))
+  out <- data.frame(Estimate=c(object$a[1], object$b[1]), `Std. Error`=c(object$a[2], object$b[2]))
   rownames(out) <- c("Intercept","x")
 
   return(out)
@@ -570,14 +594,14 @@ loss_per_obs.york <- function(data, model=NULL, intercept=NA, slope=NA, func="li
 #' @details
 #' ...
 #'
-#' @param model
+#' @param object
 #' York regression model, as output by `york()`
 #'
-#' @param data
-#' Data matrix. Assumed to be a matrix with columns containing (in order):
+#' @param ...
+#' Must include data matrix named `data`. Assumed to be a matrix with columns containing (in order):
 #' X, standard error of X, Y, standard error of Y, and residual correlation.
 #' The correlation column may be omitted, in which case the correlation is
-#' assumed to be 0.
+#' assumed to be 0. All other arguments ignored.
 #'
 #' @return
 #' Data frame of residuals for each observation with columns:
@@ -593,8 +617,13 @@ loss_per_obs.york <- function(data, model=NULL, intercept=NA, slope=NA, func="li
 #'
 #' @export
 
-residuals.york <- function(model, data){
+residuals.york <- function(object, ...){
 
-  loss_per_obs.york(data, model=model, func="predicted_values")
+  args <- list(...)
 
+  if(exists(args$data)){
+    loss_per_obs.york(args$data, model=object, func="predicted_values")
+  }else{
+    stop("York regression residuals requires specifying separate `data`")
+  }
 }

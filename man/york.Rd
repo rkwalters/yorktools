@@ -65,7 +65,13 @@ ytrue <- a0 + b*xtrue
 xsd <- sqrt(runif(n,.05,1))
 ysd <- sqrt(runif(n,.05,0.5))
 re <- rep(0.3,n)
-obs <- t(sapply(1:n, function(i) MASS::mvrnorm(1, mu=c(xtrue[i],ytrue[i]), Sigma = matrix(c(xsd[i]^2, re[i]*xsd[i]*ysd[i], re[i]*xsd[i]*ysd[i], ysd[i]^2),2,2))))
+obs <- t(sapply(1:n,
+    function(i){
+        MASS::mvrnorm(1,
+            mu=c(xtrue[i],ytrue[i]),
+            Sigma = matrix(c(xsd[i]^2, re[i]*xsd[i]*ysd[i], re[i]*xsd[i]*ysd[i], ysd[i]^2),2,2)
+        )
+    }))
 dat <-data.frame(x=obs[,1],sx=xsd,y=obs[,2],sy=ysd,re=re)
 
 # IsoplotR::york(dat)
@@ -75,6 +81,7 @@ f1 <- lm(y~x, data=dat, weight=1/dat$sy^2)
 f2 <- york(dat)
 f3 <- york(dat, intercept=0)
 
+\dontrun{
 plot(dat$x, dat$y, xlim=c(0,7.5), ylim=c(0,7.5), pch=20)
 arrows(x0=dat$x-dat$sx,x1=dat$x+dat$sx,y0=dat$y,y1=dat$y,code=3,angle=90,length=0.02)
 arrows(x0=dat$x,x1=dat$x,y0=dat$y-dat$sy,y1=dat$y+dat$sy,code=3,angle=90,length=0.02)
@@ -84,12 +91,8 @@ abline(f1$coefficients[1], f1$coefficients[2], col="red", lty=2)
 abline(f2$a[1], f2$b[1], col="green")
 abline(f3$a[1], f3$b[1], col="purple")
 dev.off()
+}
 
-f2
-
-f3
-
-# york(dat, method="ML")
 
 }
 \references{

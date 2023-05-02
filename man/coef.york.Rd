@@ -4,15 +4,12 @@
 \alias{coef.york}
 \title{York Regression coefficients}
 \usage{
-\method{coef}{york}(model)
+\method{coef}{york}(object, ...)
 }
 \arguments{
-\item{model}{York regression model, as output by `york()`}
+\item{object}{York regression model, as output by `york()`}
 
-\item{data}{Data matrix. Assumed to be a matrix with columns containing (in order):
-X, standard error of X, Y, standard error of Y, and residual correlation.
-The correlation column may be omitted, in which case the correlation is
-assumed to be 0.}
+\item{...}{Ignored}
 }
 \value{
 Estimates and standard errors from the fitted York regression model

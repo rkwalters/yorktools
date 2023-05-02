@@ -2,12 +2,9 @@
 % Please edit documentation in R/york.R
 \name{pred.york}
 \alias{pred.york}
-\alias{fitted.york}
 \title{York Regression predicted values}
 \usage{
 pred.york(data, model = NULL, intercept = NA, slope = NA)
-
-\method{fitted}{york}(model, data)
 }
 \arguments{
 \item{data}{Data matrix. Assumed to be a matrix with columns containing (in order):
