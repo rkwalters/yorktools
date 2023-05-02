@@ -3,5 +3,5 @@
 *RProj*
 .Rhistory
 .Rbuildignore
-./demos
+demos/
 
