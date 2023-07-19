@@ -13,6 +13,8 @@
 #' assumed to be 0.
 #' @param intercept
 #' Regression intercept. If 'NA' intercept is freely estimated, otherwise fixed to the given value.
+#' @param weights
+#' Vector of weights >=0 for the observations.
 #' @param method
 #' Method for computing standard errors. Can be one
 #' of "LS" (original least squares SE from York) or "ML" (Titterington).
@@ -108,7 +110,7 @@
 
 
 # adapted from isoplotR function york()
-york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALSE,gridstartvals=TRUE){
+york <- function(data,intercept=NA,weights=rep(1, nrow(data)),method="LS",tol=1e-12,maxit=5000,verbose=FALSE,gridstartvals=TRUE){
 
   # input check
   dat <- as.data.frame(data)
@@ -125,6 +127,14 @@ york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALS
     warning("ML standard errors for fixed intercept regression are unverified")
   }
 
+  if(length(weights) != nrow(data)){
+    stop("weights must be a vector with length matching the number of data rows")
+  }
+
+  if(any(weights < 0)){
+    stop("weights must all be >= 0")
+  }
+
   # get data from data frame
   if (ncol(dat)==4){
     dat <- cbind(dat,0)
@@ -137,7 +147,19 @@ york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALS
     n_drop <- sum(na_rows)
     warning("Omitting ",n_drop," entries with missing data.")
     dat <- dat[!na_rows,]
+    weights <- weights[!na_rows]
   }
+
+  # norm weights
+  if(any(weights==0)){
+    na_w_rows <- as.logical(weights==0)
+    n_w_drop <- sum(na_w_rows)
+    warning("Omitting ",n_w_drop," entries with zero weight.")
+    dat <- dat[!na_w_rows,]
+    weights <- weights[!na_w_rows]
+  }
+
+  weights <- nrow(dat)*weights/sum(weights)
 
   # extract values
   X <- dat[,'X']
@@ -152,14 +174,14 @@ york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALS
   # initial guesses
   if(!gridstartvals){
     if(is.na(intercept)){
-      mod <- stats::lm(Y ~ X, weights=1/((sX^2) + (sY^2) - 2*covXY))$coefficients
+      mod <- stats::lm(Y ~ X, weights=weights*1/((sX^2) + (sY^2) - 2*covXY))$coefficients
       if(any(is.na(mod))){
         stop('Cannot fit a straight line through these data')
       }
       b <- mod[2]
       a <- mod[1]
     }else{
-      modb <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=1/((sX^2) + (sY^2) - 2*covXY))$coefficients
+      modb <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=weights*1/((sX^2) + (sY^2) - 2*covXY))$coefficients
       if(any(is.na(modb))){
         stop('Cannot fit a straight line through these data')
       }
@@ -167,30 +189,30 @@ york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALS
       a <- intercept
     }
 
-    Winit <- 1/(sY^2 + (b^2)*sX^2 - 2*b*covXY)
+    Winit <- weights*1/(sY^2 + (b^2)*sX^2 - 2*b*covXY)
     loss <- sum(Winit*(Y-X*b-a)^2)
 
   }else{
     # test multiple lm fits + surrounding grid to help avoid local minima
     if(is.na(intercept)){
-      mod1b <- stats::lm(Y ~ X)$coefficients[2]
+      mod1b <- stats::lm(Y ~ X, weights=weights)$coefficients[2]
       if(any(is.na(mod1b))){
         stop('Cannot fit a straight line through these data')
       }
-      mod2b <- stats::lm(Y ~ X, weights=wY)$coefficients[2]
-      mod3b <- stats::lm(Y ~ X, weights=wX)$coefficients[2]
-      mod4b <- stats::lm(Y ~ X, weights=1/((sX^2) + (sY^2)))$coefficients[2]
-      mod5b <- stats::lm(Y ~ X, weights=1/((sX^2) + (sY^2) - 2*covXY))$coefficients[2]
+      mod2b <- stats::lm(Y ~ X, weights=weights*wY)$coefficients[2]
+      mod3b <- stats::lm(Y ~ X, weights=weights*wX)$coefficients[2]
+      mod4b <- stats::lm(Y ~ X, weights=weights*1/((sX^2) + (sY^2)))$coefficients[2]
+      mod5b <- stats::lm(Y ~ X, weights=weights*1/((sX^2) + (sY^2) - 2*covXY))$coefficients[2]
 
     }else{
-      mod1b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)))$coefficients[1]
+      mod1b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=weights)$coefficients[1]
       if(any(is.na(mod1b))){
         stop('Cannot fit a straight line through these data')
       }
-      mod2b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=wY)$coefficients[1]
-      mod3b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=wX)$coefficients[1]
-      mod4b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=1/((sX^2) + (sY^2)))$coefficients[1]
-      mod5b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=1/((sX^2) + (sY^2) - 2*covXY))$coefficients[1]
+      mod2b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=weights*wY)$coefficients[1]
+      mod3b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=weights*wX)$coefficients[1]
+      mod4b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=weights*1/((sX^2) + (sY^2)))$coefficients[1]
+      mod5b <- stats::lm(Y ~ 0 + X, offset = rep(intercept,nrow(dat)), weights=weights*1/((sX^2) + (sY^2) - 2*covXY))$coefficients[1]
     }
 
     maxb <- max(abs(c(mod1b, mod2b, mod3b, mod4b, mod5b)))
@@ -201,7 +223,7 @@ york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALS
     ainit <- rep(NA, length(qq))
 
     for(i in 1:length(qq)){
-      Winit <- wX*wY/(wX+(qq[i]^2)*wY-2*qq[i]*dat[,'rXY']*sqrt(wX*wY))
+      Winit <- weights*wX*wY/(wX+(qq[i]^2)*wY-2*qq[i]*dat[,'rXY']*sqrt(wX*wY))
       if(is.na(intercept)){
         Xbar <- sum(Winit*X)/sum(Winit)
         Ybar <- sum(Winit*Y)/sum(Winit)
@@ -227,7 +249,7 @@ york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALS
     bold <- b
     lossold <- loss
     A <- sqrt(wX*wY)
-    W <- 1/(sY^2 + (b^2)*sX^2 - 2*b*covXY)
+    W <- weights*1/(sY^2 + (b^2)*sX^2 - 2*b*covXY)
     # possible safeguard, but shouldn't be necessary (and probably right to error out if it happens)
     # Xbar <- sum(W*X,na.rm=TRUE)/sum(W,na.rm=TRUE)
     # Ybar <- sum(W*Y,na.rm=TRUE)/sum(W,na.rm=TRUE)
