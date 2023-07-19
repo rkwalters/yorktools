@@ -1,7 +1,7 @@
 Package: yorktools
 Type: Package
 Title: York Regression Extensions 
-Version: 0.0.2
+Version: 0.0.4
 Author: Raymond Walters
 Maintainer: Raymond Walters <rwalters@broadinstitute.org>
 Description: York regression with extended options, including

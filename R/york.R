@@ -108,7 +108,7 @@
 
 
 # adapted from isoplotR function york()
-york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,gridstartvals=TRUE){
+york <- function(data,intercept=NA,method="LS",tol=1e-12,maxit=5000,verbose=FALSE,gridstartvals=TRUE){
 
   # input check
   dat <- as.data.frame(data)
@@ -205,7 +205,7 @@ york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,
       if(is.na(intercept)){
         Xbar <- sum(Winit*X)/sum(Winit)
         Ybar <- sum(Winit*Y)/sum(Winit)
-        ainit[i] <- Ybar-b*Xbar
+        ainit[i] <- Ybar-qq[i]*Xbar
       }else{
         ainit[i] <- intercept
       }
@@ -344,7 +344,7 @@ york <- function(data,intercept=NA,method="LS",tol=1e-15,maxit=50,verbose=FALSE,
   out$df <- df
   out$chi2 <- chi2
   out$mswd <- chi2/df
-  out$p.value <- as.numeric(1-stats::pchisq(chi2,out$df))
+  out$p.value <- stats::pchisq(chi2,out$df,lower=F)
 
   out$converge <- list(converged=converge, tol=tol)
   out$type <- 'york'
